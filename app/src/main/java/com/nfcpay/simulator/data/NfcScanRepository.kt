@@ -53,7 +53,8 @@ class SharedPreferencesNfcScanRepository(context: Context) : NfcScanRepository {
             buildList {
                 for (i in 0 until arr.length()) {
                     val obj = arr.optJSONObject(i) ?: continue
-                    val id = obj.optString("id", "").ifEmpty { continue }
+                    val id = obj.optString("id", "")
+                    if (id.isEmpty()) continue
                     val title = obj.optString("title", "NFC-метка")
                     val timestamp = obj.optLong("timestampMillis", 0L)
                     val uidHex = obj.optString("uidHex", "").ifEmpty { null }

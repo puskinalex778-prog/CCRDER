@@ -53,7 +53,8 @@ class SharedPreferencesHistoryRepository(context: Context) : HistoryRepository {
             buildList {
                 for (i in 0 until array.length()) {
                     val obj = array.optJSONObject(i) ?: continue
-                    val id = obj.optString("id", "").ifEmpty { continue }
+                    val id = obj.optString("id", "")
+                    if (id.isEmpty()) continue
                     val amount = obj.optLong("amountKopecks", 0L)
                     val timestamp = obj.optLong("timestampMillis", 0L)
                     val status = obj.optString("status", DemoTransaction.STATUS_COMPLETED)

@@ -117,10 +117,10 @@ class FeedbackManager(context: Context) {
     )
 
     private fun playTonesAsync(segments: List<ToneSegment>) {
-        audioExecutor.execute {
+        audioExecutor.execute(Runnable {
             val sampleRate = 44100
             val totalSamples = segments.sumOf { (sampleRate * it.durationMs) / 1000 }
-            if (totalSamples <= 0) return@execute
+            if (totalSamples <= 0) return@Runnable
 
             val pcm = ShortArray(totalSamples)
             var cursor = 0
@@ -182,6 +182,6 @@ class FeedbackManager(context: Context) {
                     // Ignore release error
                 }
             }
-        }
+        })
     }
 }

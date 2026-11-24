@@ -51,25 +51,22 @@ class NfcReaderController(
             putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 500)
         }
 
-        adapter.enableReaderMode(
-            activity,
-            { tag ->
-                // Guard against duplicate/rapid NFC callbacks triggering multiple demos
-                if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
-                    return@enableReaderMode
-                }
+        val callback = NfcAdapter.ReaderCallback { tag ->
+            // Guard against duplicate/rapid NFC callbacks triggering multiple demos
+            if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
+                return@ReaderCallback
+            }
 
-                val result = publicDataReader.readTag(tag)
+            val result = publicDataReader.readTag(tag)
 
-                // Stop Reader Mode immediately after one tag event
-                activity.runOnUiThread {
-                    stopReading(activity)
-                    onResult(result)
-                }
-            },
-            flags,
-            extras
-        )
+            // Stop Reader Mode immediately after one tag event
+            activity.runOnUiThread {
+                stopReading(activity)
+                onResult(result)
+            }
+        }
+
+        adapter.enableReaderMode(activity, callback, flags, extras)
 
         return NfcHardwareStatus.ENABLED
     }

@@ -57,7 +57,7 @@ class TerminalViewModelTest {
     )
 
     @Test
-    fun `full NFC happy path enforces consent, processes card, and stores no PAN in history`() = runTest {
+    fun `full NFC happy path enforces consent, processes card, and stores no PAN in history`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -122,7 +122,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `card without readable last4 prompts user and continues without fake digits`() = runTest {
+    fun `card without readable last4 prompts user and continues without fake digits`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -152,7 +152,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `demo without NFC skips consent and waiting and does not invent card digits`() = runTest {
+    fun `demo without NFC skips consent and waiting and does not invent card digits`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.NOT_SUPPORTED)
 
@@ -176,7 +176,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `waiting for card times out after 30 seconds`() = runTest {
+    fun `waiting for card times out after 30 seconds`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -197,7 +197,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `backgrounding app stops NFC waiting immediately`() = runTest {
+    fun `backgrounding app stops NFC waiting immediately`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -213,7 +213,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `disabled or missing NFC transitions cleanly to error after consent`() = runTest {
+    fun `disabled or missing NFC transitions cleanly to error after consent`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.DISABLED)
 
@@ -233,7 +233,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `unsupported card and interrupted read produce expected error states`() = runTest {
+    fun `unsupported card and interrupted read produce expected error states`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -251,7 +251,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `clearing history removes all saved items`() = runTest {
+    fun `clearing history removes all saved items`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onDemoWithoutNfcClick()
         vm.onDigitPressed('5')

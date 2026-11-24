@@ -2,7 +2,7 @@ name: Build NFC PAY APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'v*' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
@@ -40,24 +40,27 @@ jobs:
       - name: Build Release APK (unsigned)
         run: gradle assembleRelease --stacktrace
 
-      - name: Rename APKs for clarity
+      - name: Package APKs with version name
+        id: pkg
         run: |
+          VER=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
           mkdir -p artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk artifacts/NFC-PAY-debug.apk
-          cp app/build/outputs/apk/release/app-release-unsigned.apk artifacts/NFC-PAY-release-unsigned.apk
+          cp app/build/outputs/apk/debug/app-debug.apk "artifacts/NFC-PAY-v${VER}-debug.apk"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "artifacts/NFC-PAY-v${VER}-release-unsigned.apk"
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NFC-PAY-debug-apk
-          path: artifacts/NFC-PAY-debug.apk
+          name: NFC-PAY-v${{ steps.pkg.outputs.version }}-debug-apk
+          path: artifacts/NFC-PAY-v${{ steps.pkg.outputs.version }}-debug.apk
           retention-days: 30
 
       - name: Upload Release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NFC-PAY-release-unsigned-apk
-          path: artifacts/NFC-PAY-release-unsigned.apk
+          name: NFC-PAY-v${{ steps.pkg.outputs.version }}-release-unsigned-apk
+          path: artifacts/NFC-PAY-v${{ steps.pkg.outputs.version }}-release-unsigned.apk
           retention-days: 30
 
       - name: Upload Test Report
@@ -73,5 +76,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/NFC-PAY-debug.apk
-            artifacts/NFC-PAY-release-unsigned.apk
+            artifacts/NFC-PAY-v${{ steps.pkg.outputs.version }}-debug.apk
+            artifacts/NFC-PAY-v${{ steps.pkg.outputs.version }}-release-unsigned.apk

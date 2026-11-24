@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Only NFC (for Reader Mode) and Vibration (for haptic feedback). No INTERNET permission. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Optional NFC hardware so devices without NFC can still use Demo without NFC mode. -->
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.NfcPay"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.NfcPay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

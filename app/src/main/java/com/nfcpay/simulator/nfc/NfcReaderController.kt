@@ -53,22 +53,19 @@ class NfcReaderController(
             putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 500)
         }
 
-        adapter.enableReaderMode(
-            activity,
-            { tag ->
-                if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
-                    return@enableReaderMode
-                }
+        val callback = NfcAdapter.ReaderCallback { tag ->
+            if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
+                return@ReaderCallback
+            }
 
-                val result = publicDataReader.readTag(tag)
-                activity.runOnUiThread {
-                    stopReading(activity)
-                    onResult(result)
-                }
-            },
-            flags,
-            extras
-        )
+            val result = publicDataReader.readTag(tag)
+            activity.runOnUiThread {
+                stopReading(activity)
+                onResult(result)
+            }
+        }
+
+        adapter.enableReaderMode(activity, callback, flags, extras)
 
         return NfcHardwareStatus.ENABLED
     }
@@ -102,22 +99,19 @@ class NfcReaderController(
             putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 500)
         }
 
-        adapter.enableReaderMode(
-            activity,
-            { tag ->
-                if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
-                    return@enableReaderMode
-                }
+        val callback = NfcAdapter.ReaderCallback { tag ->
+            if (!isActive.get() || !singleReadConsumed.compareAndSet(false, true)) {
+                return@ReaderCallback
+            }
 
-                val result = tagInspector.inspectTag(tag)
-                activity.runOnUiThread {
-                    stopReading(activity)
-                    onResult(result)
-                }
-            },
-            flags,
-            extras
-        )
+            val result = tagInspector.inspectTag(tag)
+            activity.runOnUiThread {
+                stopReading(activity)
+                onResult(result)
+            }
+        }
+
+        adapter.enableReaderMode(activity, callback, flags, extras)
 
         return NfcHardwareStatus.ENABLED
     }

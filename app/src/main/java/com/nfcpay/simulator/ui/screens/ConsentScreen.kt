@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalPrimaryButton
 import com.nfcpay.simulator.ui.components.TerminalSecondaryButton
 import com.nfcpay.simulator.ui.components.TerminalTopBar
@@ -43,9 +44,13 @@ import com.nfcpay.simulator.ui.theme.TextSecondary
 @Composable
 fun ConsentScreen(
     amountKopecks: Long,
+    direction: PaymentDirection,
     onConfirmClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(amountKopecks)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,9 +80,13 @@ fun ConsentScreen(
                 border = BorderStroke(1.dp, GraphiteOutline)
             ) {
                 Text(
-                    text = "Сумма: ${AmountValidator.formatRubles(amountKopecks)}",
+                    text = if (isSendMode) {
+                        "Зачисление на карту: + $formattedAmount"
+                    } else {
+                        "Сумма: $formattedAmount"
+                    },
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary,
+                    color = if (isSendMode) EmeraldAccent else TextPrimary,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                 )
             }

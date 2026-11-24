@@ -61,8 +61,11 @@ fun HomeScreen(
     nfcStatus: NfcHardwareStatus,
     settings: AppSettings,
     historyCount: Int,
+    savedScansCount: Int,
     onReceivePaymentClick: () -> Unit,
+    onSendToCardClick: () -> Unit,
     onDemoWithoutNfcClick: () -> Unit,
+    onOpenNfcScannerClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onOpenNfcSettings: () -> Unit,
     onSoundToggle: (Boolean) -> Unit,
@@ -73,7 +76,7 @@ fun HomeScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Header with brand logo and live NFC status
         Row(
@@ -89,7 +92,7 @@ fun HomeScreen(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(172.dp),
+                .height(160.dp),
             shape = RoundedCornerShape(22.dp),
             color = GraphiteCard,
             border = BorderStroke(1.dp, GraphiteOutline)
@@ -141,7 +144,7 @@ fun HomeScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Без банковских операций и списания средств",
+                            text = "Приём, зачисление и чтение NFC без списания средств",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -188,8 +191,8 @@ fun HomeScreen(
             }
         }
 
-        // Primary actions
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Primary actions: Receive & Reverse Send (Top-Up)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TerminalPrimaryButton(
                 text = "Получить платёж",
                 onClick = onReceivePaymentClick,
@@ -197,68 +200,43 @@ fun HomeScreen(
             )
 
             TerminalSecondaryButton(
+                text = "Отправить на карту",
+                onClick = onSendToCardClick,
+                iconRes = R.drawable.ic_arrow_right,
+                accentColor = EmeraldAccent
+            )
+
+            TerminalSecondaryButton(
                 text = "Демо без NFC",
                 onClick = onDemoWithoutNfcClick,
                 iconRes = R.drawable.ic_demo,
-                accentColor = EmeraldAccent
+                accentColor = TextPrimary
             )
         }
 
+        // NFC Data Scanner card
+        HomeMenuCard(
+            iconRes = R.drawable.ic_nfc,
+            title = "Сканер NFC-данных",
+            subtitle = if (savedScansCount == 0) {
+                "Считать и сохранить открытые данные"
+            } else {
+                "Сохранённых меток: $savedScansCount"
+            },
+            onClick = onOpenNfcScannerClick
+        )
+
         // History navigation card
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .clickable(onClick = onHistoryClick),
-            shape = RoundedCornerShape(18.dp),
-            color = GraphiteCard,
-            border = BorderStroke(1.dp, GraphiteOutline)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GraphiteElevated),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_history),
-                        contentDescription = null,
-                        tint = EmeraldAccent,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "История транзакций",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = if (historyCount == 0) {
-                            "Нет сохранённых записей"
-                        } else {
-                            "Записей: $historyCount"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_arrow_right),
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+        HomeMenuCard(
+            iconRes = R.drawable.ic_history,
+            title = "История транзакций",
+            subtitle = if (historyCount == 0) {
+                "Нет сохранённых записей"
+            } else {
+                "Записей: $historyCount"
+            },
+            onClick = onHistoryClick
+        )
 
         // Sound & Vibration settings card
         Surface(
@@ -289,7 +267,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         Text(
             text = "Развлекательный офлайн-симулятор · Интернет не используется",
@@ -297,6 +275,65 @@ fun HomeScreen(
             color = TextMuted,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Composable
+private fun HomeMenuCard(
+    iconRes: Int,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = GraphiteCard,
+        border = BorderStroke(1.dp, GraphiteOutline)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GraphiteElevated),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = EmeraldAccent,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_right),
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

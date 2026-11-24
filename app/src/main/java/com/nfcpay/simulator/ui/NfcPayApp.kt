@@ -19,6 +19,10 @@ import com.nfcpay.simulator.ui.screens.ConsentScreen
 import com.nfcpay.simulator.ui.screens.ErrorScreen
 import com.nfcpay.simulator.ui.screens.HistoryScreen
 import com.nfcpay.simulator.ui.screens.HomeScreen
+import com.nfcpay.simulator.ui.screens.NfcScanDetailScreen
+import com.nfcpay.simulator.ui.screens.NfcScanPreviewScreen
+import com.nfcpay.simulator.ui.screens.NfcScannerHomeScreen
+import com.nfcpay.simulator.ui.screens.NfcScannerReadingScreen
 import com.nfcpay.simulator.ui.screens.NumberUnavailableScreen
 import com.nfcpay.simulator.ui.screens.ProcessingScreen
 import com.nfcpay.simulator.ui.screens.ResultScreen
@@ -37,6 +41,7 @@ fun NfcPayApp(
     val nfcStatus by viewModel.nfcStatus.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
+    val savedScans by viewModel.savedScans.collectAsStateWithLifecycle()
 
     BackHandler(enabled = uiState !is TerminalUiState.Home) {
         viewModel.onBackPressed()
@@ -63,8 +68,11 @@ fun NfcPayApp(
                         nfcStatus = nfcStatus,
                         settings = settings,
                         historyCount = history.size,
+                        savedScansCount = savedScans.size,
                         onReceivePaymentClick = viewModel::onReceivePaymentClick,
-                        onDemoWithoutNfcClick = viewModel::onDemoWithoutNfcClick,
+                        onSendToCardClick = viewModel::onSendToCardClick,
+                        onDemoWithoutNfcClick = { viewModel.onDemoWithoutNfcClick() },
+                        onOpenNfcScannerClick = viewModel::onOpenNfcScannerClick,
                         onHistoryClick = viewModel::onOpenHistoryClick,
                         onOpenNfcSettings = onOpenNfcSettings,
                         onSoundToggle = viewModel::setSoundEnabled,
@@ -74,6 +82,7 @@ fun NfcPayApp(
                     is TerminalUiState.AmountEntry -> AmountEntryScreen(
                         input = state.input,
                         isNoCardDemo = state.isNoCardDemo,
+                        direction = state.direction,
                         onDigitClick = viewModel::onDigitPressed,
                         onDecimalClick = viewModel::onDecimalPressed,
                         onBackspaceClick = viewModel::onBackspacePressed,
@@ -84,6 +93,7 @@ fun NfcPayApp(
 
                     is TerminalUiState.CardholderConsent -> ConsentScreen(
                         amountKopecks = state.amountKopecks,
+                        direction = state.direction,
                         onConfirmClick = viewModel::onConsentConfirmed,
                         onCancelClick = viewModel::onConsentCancelled
                     )
@@ -92,12 +102,14 @@ fun NfcPayApp(
                         amountKopecks = state.amountKopecks,
                         remainingSeconds = state.remainingSeconds,
                         totalSeconds = state.totalSeconds,
+                        direction = state.direction,
                         onCancelClick = viewModel::onCancelWaiting
                     )
 
                     is TerminalUiState.NumberUnavailablePrompt -> NumberUnavailableScreen(
                         amountKopecks = state.amountKopecks,
                         metadata = state.metadata,
+                        direction = state.direction,
                         onContinueWithoutNumberClick = viewModel::onContinueWithoutCardNumber,
                         onRetryClick = viewModel::onRetryWaiting,
                         onCancelClick = viewModel::onBackToHome
@@ -105,30 +117,68 @@ fun NfcPayApp(
 
                     is TerminalUiState.Processing -> ProcessingScreen(
                         amountKopecks = state.amountKopecks,
-                        metadata = state.metadata
+                        metadata = state.metadata,
+                        direction = state.direction
                     )
 
                     is TerminalUiState.Result -> ResultScreen(
                         amountKopecks = state.amountKopecks,
                         metadata = state.metadata,
                         timestampMillis = state.timestampMillis,
+                        direction = state.direction,
                         onRepeatClick = viewModel::onRepeatFromResult,
                         onHomeClick = viewModel::onBackToHome
                     )
 
                     is TerminalUiState.Error -> ErrorScreen(
                         error = state.error,
-                        hasAmountToRetry = state.amountKopecks != null,
+                        hasRetryTarget = state.isFromScanner || state.amountKopecks != null,
+                        isFromScanner = state.isFromScanner,
                         onOpenNfcSettings = onOpenNfcSettings,
                         onRetryClick = viewModel::onRetryWaiting,
                         onDemoWithoutNfcClick = viewModel::onSwitchToNoCardDemoFromError,
-                        onHomeClick = viewModel::onBackToHome
+                        onHomeClick = {
+                            if (state.isFromScanner) {
+                                viewModel.onOpenNfcScannerClick()
+                            } else {
+                                viewModel.onBackToHome()
+                            }
+                        }
                     )
 
                     is TerminalUiState.History -> HistoryScreen(
                         transactions = history,
                         onClearHistory = viewModel::onClearHistoryConfirm,
                         onBackClick = viewModel::onBackToHome
+                    )
+
+                    is TerminalUiState.NfcScannerHome -> NfcScannerHomeScreen(
+                        nfcStatus = nfcStatus,
+                        savedScans = savedScans,
+                        onStartScanClick = viewModel::onStartNfcScanClick,
+                        onOpenScanDetail = viewModel::onOpenSavedScanDetail,
+                        onClearAllScans = viewModel::onClearSavedScansConfirm,
+                        onBackClick = viewModel::onBackToHome
+                    )
+
+                    is TerminalUiState.NfcScannerReading -> NfcScannerReadingScreen(
+                        remainingSeconds = state.remainingSeconds,
+                        totalSeconds = state.totalSeconds,
+                        onCancelClick = viewModel::onOpenNfcScannerClick
+                    )
+
+                    is TerminalUiState.NfcScanPreview -> NfcScanPreviewScreen(
+                        draft = state.draft,
+                        onSaveClick = viewModel::onSaveScannedTag,
+                        onRescanClick = viewModel::onStartNfcScanClick,
+                        onDiscardClick = viewModel::onOpenNfcScannerClick
+                    )
+
+                    is TerminalUiState.NfcScanDetail -> NfcScanDetailScreen(
+                        record = state.record,
+                        onDeleteClick = { viewModel.onDeleteSavedScan(state.record.id) },
+                        onRescanClick = viewModel::onStartNfcScanClick,
+                        onBackClick = viewModel::onOpenNfcScannerClick
                     )
                 }
             }

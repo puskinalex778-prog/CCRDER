@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
 import com.nfcpay.simulator.domain.model.CardPublicMetadata
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalPrimaryButton
 import com.nfcpay.simulator.ui.components.TerminalSecondaryButton
 import com.nfcpay.simulator.ui.components.TerminalTopBar
@@ -42,10 +43,14 @@ import com.nfcpay.simulator.ui.theme.TextSecondary
 fun NumberUnavailableScreen(
     amountKopecks: Long,
     metadata: CardPublicMetadata,
+    direction: PaymentDirection,
     onContinueWithoutNumberClick: () -> Unit,
     onRetryClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(amountKopecks)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,14 +104,14 @@ fun NumberUnavailableScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Сумма",
+                            text = if (isSendMode) "К зачислению" else "Сумма",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
                         Text(
-                            text = AmountValidator.formatRubles(amountKopecks),
+                            text = if (isSendMode) "+ $formattedAmount" else formattedAmount,
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary
+                            color = if (isSendMode) EmeraldAccent else TextPrimary
                         )
                     }
                     Row(

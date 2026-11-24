@@ -32,7 +32,8 @@ import com.nfcpay.simulator.ui.theme.TextSecondary
 @Composable
 fun ErrorScreen(
     error: TerminalError,
-    hasAmountToRetry: Boolean,
+    hasRetryTarget: Boolean,
+    isFromScanner: Boolean,
     onOpenNfcSettings: () -> Unit,
     onRetryClick: () -> Unit,
     onDemoWithoutNfcClick: () -> Unit,
@@ -42,27 +43,31 @@ fun ErrorScreen(
         TerminalError.NFC_NOT_SUPPORTED -> Triple(
             R.drawable.ill_nfc_disabled,
             "NFC не поддерживается",
-            "На этом устройстве отсутствует модуль NFC. Вы можете запустить демонстрацию в режиме «Демо без NFC»."
+            if (isFromScanner) {
+                "На этом устройстве отсутствует модуль NFC, поэтому считывание меток недоступно."
+            } else {
+                "На этом устройстве отсутствует модуль NFC. Вы можете запустить демонстрацию в режиме «Демо без NFC»."
+            }
         )
         TerminalError.NFC_DISABLED -> Triple(
             R.drawable.ill_nfc_disabled,
             "NFC выключен",
-            "Включите NFC в системных настройках устройства и вернитесь в приложение, либо используйте режим «Демо без NFC»."
+            "Включите NFC в системных настройках устройства и вернитесь в приложение."
         )
         TerminalError.UNSUPPORTED_CARD -> Triple(
             R.drawable.ill_error,
-            "Карта не поддерживается",
-            "Обнаруженная метка или карта не поддерживает стандартное чтение. Попробуйте приложить другую бесконтактную карту."
+            "Метка не поддерживается",
+            "Обнаруженная метка или карта не поддерживает стандартное чтение. Попробуйте другую бесконтактную карту или NFC-метку."
         )
         TerminalError.READ_INTERRUPTED -> Triple(
             R.drawable.ill_error,
-            "Ошибка чтения карты",
-            "Соединение было прервано. Удерживайте карту возле NFC-антенны неподвижно 1–2 секунды."
+            "Ошибка чтения",
+            "Соединение было прервано. Удерживайте карту или метку возле NFC-антенны неподвижно 1–2 секунды."
         )
         TerminalError.TIMEOUT -> Triple(
             R.drawable.ill_error,
             "Время ожидания истекло",
-            "За 30 секунд карта не была приложена. Считывание NFC автоматически остановлено."
+            "За 30 секунд карта или метка не была приложена. Считывание NFC автоматически остановлено."
         )
         TerminalError.APP_BACKGROUNDED -> Triple(
             R.drawable.ill_error,
@@ -122,50 +127,56 @@ fun ErrorScreen(
                             onClick = onOpenNfcSettings,
                             iconRes = R.drawable.ic_settings
                         )
-                        if (hasAmountToRetry) {
+                        if (hasRetryTarget) {
                             TerminalSecondaryButton(
                                 text = "Проверить снова",
                                 onClick = onRetryClick,
                                 iconRes = R.drawable.ic_retry
                             )
                         }
-                        TerminalSecondaryButton(
-                            text = "Демо без NFC",
-                            onClick = onDemoWithoutNfcClick,
-                            iconRes = R.drawable.ic_demo,
-                            accentColor = EmeraldAccent
-                        )
+                        if (!isFromScanner) {
+                            TerminalSecondaryButton(
+                                text = "Демо без NFC",
+                                onClick = onDemoWithoutNfcClick,
+                                iconRes = R.drawable.ic_demo,
+                                accentColor = EmeraldAccent
+                            )
+                        }
                     }
                     TerminalError.NFC_NOT_SUPPORTED -> {
-                        TerminalPrimaryButton(
-                            text = "Демо без NFC",
-                            onClick = onDemoWithoutNfcClick,
-                            iconRes = R.drawable.ic_demo
-                        )
+                        if (!isFromScanner) {
+                            TerminalPrimaryButton(
+                                text = "Демо без NFC",
+                                onClick = onDemoWithoutNfcClick,
+                                iconRes = R.drawable.ic_demo
+                            )
+                        }
                     }
                     TerminalError.UNSUPPORTED_CARD,
                     TerminalError.READ_INTERRUPTED,
                     TerminalError.TIMEOUT,
                     TerminalError.APP_BACKGROUNDED -> {
-                        if (hasAmountToRetry) {
+                        if (hasRetryTarget) {
                             TerminalPrimaryButton(
                                 text = "Повторить",
                                 onClick = onRetryClick,
                                 iconRes = R.drawable.ic_retry
                             )
                         }
-                        TerminalSecondaryButton(
-                            text = "Демо без NFC",
-                            onClick = onDemoWithoutNfcClick,
-                            iconRes = R.drawable.ic_demo,
-                            accentColor = EmeraldAccent
-                        )
+                        if (!isFromScanner) {
+                            TerminalSecondaryButton(
+                                text = "Демо без NFC",
+                                onClick = onDemoWithoutNfcClick,
+                                iconRes = R.drawable.ic_demo,
+                                accentColor = EmeraldAccent
+                            )
+                        }
                     }
                 }
 
                 TextButton(onClick = onHomeClick) {
                     Text(
-                        text = "На главный экран",
+                        text = if (isFromScanner) "Вернуться в сканер" else "На главный экран",
                         style = MaterialTheme.typography.labelLarge,
                         color = TextSecondary
                     )

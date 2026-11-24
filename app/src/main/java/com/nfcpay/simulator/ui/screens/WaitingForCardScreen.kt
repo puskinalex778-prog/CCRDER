@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalSecondaryButton
 import com.nfcpay.simulator.ui.components.TerminalTopBar
 import com.nfcpay.simulator.ui.theme.AmberWarning
@@ -60,8 +61,12 @@ fun WaitingForCardScreen(
     amountKopecks: Long,
     remainingSeconds: Int,
     totalSeconds: Int,
+    direction: PaymentDirection,
     onCancelClick: () -> Unit
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(amountKopecks)
+
     val infiniteTransition = rememberInfiniteTransition(label = "nfcPulse")
     val pulse1 by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -97,7 +102,7 @@ fun WaitingForCardScreen(
             .verticalScroll(rememberScrollState())
     ) {
         TerminalTopBar(
-            title = "Ожидание карты",
+            title = if (isSendMode) "Отправка на карту" else "Ожидание карты",
             onBackClick = onCancelClick
         )
 
@@ -111,15 +116,15 @@ fun WaitingForCardScreen(
             // Amount display
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "СУММА ДЕМОНСТРАЦИИ",
+                    text = if (isSendMode) "К ЗАЧИСЛЕНИЮ НА КАРТУ" else "СУММА ДЕМОНСТРАЦИИ",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextSecondary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = AmountValidator.formatRubles(amountKopecks),
+                    text = if (isSendMode) "+ $formattedAmount" else formattedAmount,
                     style = MaterialTheme.typography.displayMedium,
-                    color = TextPrimary,
+                    color = if (isSendMode) EmeraldAccent else TextPrimary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -156,7 +161,11 @@ fun WaitingForCardScreen(
             }
 
             Text(
-                text = "Поднесите бесконтактную карту",
+                text = if (isSendMode) {
+                    "Приложите карту для зачисления"
+                } else {
+                    "Поднесите бесконтактную карту"
+                },
                 style = MaterialTheme.typography.headlineMedium,
                 color = TextPrimary,
                 textAlign = TextAlign.Center

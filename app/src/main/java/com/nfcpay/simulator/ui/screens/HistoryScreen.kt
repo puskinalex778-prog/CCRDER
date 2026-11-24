@@ -41,11 +41,13 @@ import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
 import com.nfcpay.simulator.domain.model.DemoTransaction
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalTopBar
 import com.nfcpay.simulator.ui.theme.EmeraldAccent
 import com.nfcpay.simulator.ui.theme.EmeraldContainer
 import com.nfcpay.simulator.ui.theme.ErrorSoft
 import com.nfcpay.simulator.ui.theme.GraphiteCard
+import com.nfcpay.simulator.ui.theme.GraphiteElevated
 import com.nfcpay.simulator.ui.theme.GraphiteOutline
 import com.nfcpay.simulator.ui.theme.TextMuted
 import com.nfcpay.simulator.ui.theme.TextPrimary
@@ -157,6 +159,8 @@ fun HistoryScreen(
 @Composable
 private fun HistoryItemCard(transaction: DemoTransaction) {
     var expanded by remember(transaction.id) { mutableStateOf(false) }
+    val isSendMode = transaction.direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(transaction.amountKopecks)
     val formattedDate = remember(transaction.timestampMillis) {
         val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm:ss", Locale.forLanguageTag("ru-RU"))
         formatter.format(Date(transaction.timestampMillis))
@@ -181,9 +185,9 @@ private fun HistoryItemCard(transaction: DemoTransaction) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = AmountValidator.formatRubles(transaction.amountKopecks),
+                    text = if (isSendMode) "+ $formattedAmount" else formattedAmount,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
+                    color = if (isSendMode) EmeraldAccent else TextPrimary
                 )
                 Surface(
                     color = EmeraldContainer,
@@ -203,18 +207,29 @@ private fun HistoryItemCard(transaction: DemoTransaction) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = transaction.openCardInfo,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    modifier = Modifier.weight(1f)
-                )
+                Surface(
+                    color = GraphiteElevated,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = if (isSendMode) "Зачисление на карту" else "Получение платежа",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                    )
+                }
                 Text(
                     text = formattedDate,
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )
             }
+
+            Text(
+                text = transaction.openCardInfo,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
 
             AnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

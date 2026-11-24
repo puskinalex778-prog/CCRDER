@@ -34,6 +34,7 @@ import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
 import com.nfcpay.simulator.domain.model.AmountInputState
 import com.nfcpay.simulator.domain.model.AmountValidationError
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalPrimaryButton
 import com.nfcpay.simulator.ui.components.TerminalTopBar
 import com.nfcpay.simulator.ui.theme.AmberWarning
@@ -50,6 +51,7 @@ import com.nfcpay.simulator.ui.theme.TextSecondary
 fun AmountEntryScreen(
     input: AmountInputState,
     isNoCardDemo: Boolean,
+    direction: PaymentDirection,
     onDigitClick: (Char) -> Unit,
     onDecimalClick: () -> Unit,
     onBackspaceClick: () -> Unit,
@@ -57,19 +59,31 @@ fun AmountEntryScreen(
     onContinueClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
     val displayNumber = AmountValidator.formatLiveInput(input.rawInput)
+    val prefix = if (isSendMode && input.rawInput.isNotEmpty()) "+ " else ""
+    val fullDisplay = "$prefix$displayNumber\u00A0₽"
+
     val fontSize = when {
-        displayNumber.length <= 8 -> 48.sp
-        displayNumber.length <= 12 -> 38.sp
-        else -> 30.sp
+        fullDisplay.length <= 10 -> 46.sp
+        fullDisplay.length <= 14 -> 36.sp
+        else -> 28.sp
     }
 
     val hintText = when {
+        input.isValid && isSendMode -> "Нажмите «Отправить» и приложите карту"
         input.isValid -> "Сумма готова к демонстрации"
+        input.rawInput.isEmpty() && isSendMode -> "Укажите сумму для зачисления на карту"
         input.rawInput.isEmpty() -> "Введите сумму больше 0 ₽"
         input.validationError == AmountValidationError.ZERO_OR_NEGATIVE ->
             "Сумма должна быть больше нуля"
         else -> "Допустимо не более двух знаков после запятой"
+    }
+
+    val topTitle = when {
+        isNoCardDemo -> "Демо без NFC"
+        isSendMode -> "Зачислить на карту"
+        else -> "Сумма платежа"
     }
 
     Column(
@@ -78,7 +92,7 @@ fun AmountEntryScreen(
             .verticalScroll(rememberScrollState())
     ) {
         TerminalTopBar(
-            title = if (isNoCardDemo) "Демо без NFC" else "Сумма платежа",
+            title = topTitle,
             onBackClick = onBackClick,
             trailingAction = {
                 if (input.rawInput.isNotEmpty()) {
@@ -113,6 +127,19 @@ fun AmountEntryScreen(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     )
                 }
+            } else if (isSendMode) {
+                Surface(
+                    color = EmeraldContainer,
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, EmeraldAccent.copy(alpha = 0.35f))
+                ) {
+                    Text(
+                        text = "Обратная отправка · Демо-зачисление",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = EmeraldAccent,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
             }
 
             // Large ruble display card
@@ -133,17 +160,21 @@ fun AmountEntryScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "К ОПЛАТЕ (РУБЛИ)",
+                        text = if (isSendMode) "ЗАЧИСЛИТЬ НА КАРТУ (РУБЛИ)" else "К ОПЛАТЕ (РУБЛИ)",
                         style = MaterialTheme.typography.labelMedium,
                         color = TextMuted
                     )
                     Text(
-                        text = "$displayNumber\u00A0₽",
+                        text = fullDisplay,
                         style = MaterialTheme.typography.displayLarge.copy(
                             fontSize = fontSize,
                             lineHeight = (fontSize.value + 6).sp
                         ),
-                        color = if (input.rawInput.isEmpty()) TextMuted else TextPrimary,
+                        color = when {
+                            input.rawInput.isEmpty() -> TextMuted
+                            isSendMode -> EmeraldAccent
+                            else -> TextPrimary
+                        },
                         textAlign = TextAlign.Center,
                         maxLines = 1
                     )
@@ -200,7 +231,7 @@ fun AmountEntryScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             TerminalPrimaryButton(
-                text = "Продолжить",
+                text = if (isSendMode) "Отправить" else "Продолжить",
                 onClick = onContinueClick,
                 enabled = input.isValid,
                 iconRes = R.drawable.ic_arrow_right

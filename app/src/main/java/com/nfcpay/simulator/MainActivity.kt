@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.nfcpay.simulator.data.FeedbackManager
 import com.nfcpay.simulator.data.SharedPreferencesHistoryRepository
+import com.nfcpay.simulator.data.SharedPreferencesNfcScanRepository
 import com.nfcpay.simulator.data.SharedPreferencesSettingsRepository
 import com.nfcpay.simulator.domain.model.NfcHardwareStatus
 import com.nfcpay.simulator.nfc.NfcReaderController
@@ -32,7 +33,8 @@ class MainActivity : ComponentActivity() {
     private val viewModel: TerminalViewModel by viewModels {
         TerminalViewModel.Factory(
             settingsRepository = SharedPreferencesSettingsRepository(applicationContext),
-            historyRepository = SharedPreferencesHistoryRepository(applicationContext)
+            historyRepository = SharedPreferencesHistoryRepository(applicationContext),
+            nfcScanRepository = SharedPreferencesNfcScanRepository(applicationContext)
         )
     }
 
@@ -45,19 +47,30 @@ class MainActivity : ComponentActivity() {
 
         feedbackManager = FeedbackManager(applicationContext)
 
-        // Bind NFC Reader Mode strictly to WaitingForCard while Activity is RESUMED
+        // Bind NFC Reader Mode strictly to active WaitingForCard / NfcScannerReading while RESUMED
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.uiState.collect { state ->
-                    if (state is TerminalUiState.WaitingForCard) {
-                        val status = nfcReaderController.startReading(this@MainActivity) { result ->
-                            viewModel.onNfcTagResult(result)
+                    when (state) {
+                        is TerminalUiState.WaitingForCard -> {
+                            val status = nfcReaderController.startReading(this@MainActivity) { result ->
+                                viewModel.onNfcTagResult(result)
+                            }
+                            if (status != NfcHardwareStatus.ENABLED) {
+                                viewModel.updateNfcStatus(status)
+                            }
                         }
-                        if (status != NfcHardwareStatus.ENABLED) {
-                            viewModel.updateNfcStatus(status)
+                        is TerminalUiState.NfcScannerReading -> {
+                            val status = nfcReaderController.startScanningTag(this@MainActivity) { result ->
+                                viewModel.onNfcScanResult(result)
+                            }
+                            if (status != NfcHardwareStatus.ENABLED) {
+                                viewModel.updateNfcStatus(status)
+                            }
                         }
-                    } else {
-                        nfcReaderController.stopReading(this@MainActivity)
+                        else -> {
+                            nfcReaderController.stopReading(this@MainActivity)
+                        }
                     }
                 }
             }

@@ -1,12 +1,16 @@
 package com.nfcpay.simulator
 
 import com.nfcpay.simulator.data.HistoryRepository
+import com.nfcpay.simulator.data.NfcScanRepository
 import com.nfcpay.simulator.data.SettingsRepository
 import com.nfcpay.simulator.domain.model.AppSettings
 import com.nfcpay.simulator.domain.model.CardPublicMetadata
 import com.nfcpay.simulator.domain.model.DemoTransaction
 import com.nfcpay.simulator.domain.model.NfcHardwareStatus
 import com.nfcpay.simulator.domain.model.NfcReadResult
+import com.nfcpay.simulator.domain.model.NfcScanReadResult
+import com.nfcpay.simulator.domain.model.NfcScanRecord
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.state.TerminalError
 import com.nfcpay.simulator.ui.state.TerminalUiState
 import com.nfcpay.simulator.ui.viewmodel.TerminalViewModel
@@ -24,6 +28,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -34,6 +39,7 @@ class TerminalViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var settingsRepo: FakeSettingsRepository
     private lateinit var historyRepo: FakeHistoryRepository
+    private lateinit var scanRepo: FakeNfcScanRepository
     private var fakeClockTime = 1_700_000_000_000L
 
     @Before
@@ -41,6 +47,7 @@ class TerminalViewModelTest {
         Dispatchers.setMain(testDispatcher)
         settingsRepo = FakeSettingsRepository()
         historyRepo = FakeHistoryRepository()
+        scanRepo = FakeNfcScanRepository()
     }
 
     @After
@@ -51,132 +58,182 @@ class TerminalViewModelTest {
     private fun createViewModel(): TerminalViewModel = TerminalViewModel(
         settingsRepository = settingsRepo,
         historyRepository = historyRepo,
+        nfcScanRepository = scanRepo,
         clock = { fakeClockTime },
         processingDurationMs = 1500L,
         waitTimeoutSeconds = 30
     )
 
     @Test
-    fun `full NFC happy path enforces consent, processes card, and stores no PAN in history`() = runTest {
-        val vm = createViewModel()
-        vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+    fun `full NFC happy path enforces consent, processes card, and stores no PAN in history`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
-        assertTrue(vm.uiState.value is TerminalUiState.Home)
+            assertTrue(vm.uiState.value is TerminalUiState.Home)
 
-        vm.onReceivePaymentClick()
-        assertTrue(vm.uiState.value is TerminalUiState.AmountEntry)
+            vm.onReceivePaymentClick()
+            assertTrue(vm.uiState.value is TerminalUiState.AmountEntry)
 
-        // Cannot continue with empty amount
-        vm.onAmountContinueClick()
-        assertTrue(vm.uiState.value is TerminalUiState.AmountEntry)
+            // Cannot continue with empty amount
+            vm.onAmountContinueClick()
+            assertTrue(vm.uiState.value is TerminalUiState.AmountEntry)
 
-        // Enter 1250,50
-        "1250".forEach { vm.onDigitPressed(it) }
-        vm.onDecimalPressed()
-        vm.onDigitPressed('5')
-        vm.onDigitPressed('0')
-        vm.onAmountContinueClick()
+            // Enter 1250,50
+            "1250".forEach { vm.onDigitPressed(it) }
+            vm.onDecimalPressed()
+            vm.onDigitPressed('5')
+            vm.onDigitPressed('0')
+            vm.onAmountContinueClick()
 
-        // Must enter Consent before WaitingForCard
-        val consentState = vm.uiState.value as TerminalUiState.CardholderConsent
-        assertEquals(125050L, consentState.amountKopecks)
+            // Must enter Consent before WaitingForCard
+            val consentState = vm.uiState.value as TerminalUiState.CardholderConsent
+            assertEquals(125050L, consentState.amountKopecks)
+            assertEquals(PaymentDirection.RECEIVE, consentState.direction)
 
-        // Unsolicited NFC tap during Consent MUST be ignored
-        val sampleMeta = CardPublicMetadata(
-            last4Digits = "4321",
-            applicationLabel = "MIR",
-            nfcTechnology = "IsoDep (EMV)"
-        )
-        vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta))
-        assertTrue(vm.uiState.value is TerminalUiState.CardholderConsent)
+            // Unsolicited NFC tap during Consent MUST be ignored
+            val sampleMeta = CardPublicMetadata(
+                last4Digits = "4321",
+                applicationLabel = "MIR",
+                nfcTechnology = "IsoDep (EMV)"
+            )
+            vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta))
+            assertTrue(vm.uiState.value is TerminalUiState.CardholderConsent)
 
-        // Confirm consent -> WaitingForCard
-        vm.onConsentConfirmed()
-        val waiting = vm.uiState.value as TerminalUiState.WaitingForCard
-        assertEquals(30, waiting.remainingSeconds)
+            // Confirm consent -> WaitingForCard
+            vm.onConsentConfirmed()
+            val waiting = vm.uiState.value as TerminalUiState.WaitingForCard
+            assertEquals(30, waiting.remainingSeconds)
 
-        // Card read -> Processing
-        vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta))
-        assertTrue(vm.uiState.value is TerminalUiState.Processing)
+            // Card read -> Processing
+            vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta))
+            assertTrue(vm.uiState.value is TerminalUiState.Processing)
 
-        // Duplicate tap while Processing MUST be ignored
-        vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta.copy(last4Digits = "9999")))
-        assertTrue(vm.uiState.value is TerminalUiState.Processing)
+            // Duplicate tap while Processing MUST be ignored
+            vm.onNfcTagResult(NfcReadResult.CardRead(sampleMeta.copy(last4Digits = "9999")))
+            assertTrue(vm.uiState.value is TerminalUiState.Processing)
 
-        // Complete processing animation (1500 ms)
-        advanceTimeBy(1500L)
-        advanceUntilIdle()
+            // Complete processing animation (1500 ms)
+            advanceTimeBy(1500L)
+            advanceUntilIdle()
 
-        val result = vm.uiState.value as TerminalUiState.Result
-        assertEquals(125050L, result.amountKopecks)
-        assertTrue(result.metadata.hasVerifiedLast4)
-        assertEquals("4321", result.metadata.last4Digits)
+            val result = vm.uiState.value as TerminalUiState.Result
+            assertEquals(125050L, result.amountKopecks)
+            assertEquals(PaymentDirection.RECEIVE, result.direction)
+            assertTrue(result.metadata.hasVerifiedLast4)
+            assertEquals("4321", result.metadata.last4Digits)
 
-        // Verify history saved exactly 1 record and NEVER contains card digits
-        assertEquals(1, historyRepo.history.value.size)
-        val saved = historyRepo.history.value.first()
-        assertEquals(125050L, saved.amountKopecks)
-        assertEquals(DemoTransaction.STATUS_COMPLETED, saved.status)
-        assertFalse(saved.openCardInfo.contains("4321"))
-        assertFalse(saved.openCardInfo.contains("9999"))
-    }
-
-    @Test
-    fun `card without readable last4 prompts user and continues without fake digits`() = runTest {
-        val vm = createViewModel()
-        vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
-
-        vm.onReceivePaymentClick()
-        vm.onDigitPressed('5')
-        vm.onDigitPressed('0')
-        vm.onAmountContinueClick()
-        vm.onConsentConfirmed()
-
-        val noNumberMeta = CardPublicMetadata(
-            last4Digits = null,
-            applicationLabel = null,
-            nfcTechnology = "NfcA"
-        )
-        vm.onNfcTagResult(NfcReadResult.NumberUnavailable(noNumberMeta))
-        assertTrue(vm.uiState.value is TerminalUiState.NumberUnavailablePrompt)
-
-        vm.onContinueWithoutCardNumber()
-        assertTrue(vm.uiState.value is TerminalUiState.Processing)
-
-        advanceTimeBy(1500L)
-        advanceUntilIdle()
-
-        val result = vm.uiState.value as TerminalUiState.Result
-        assertFalse(result.metadata.hasVerifiedLast4)
-        assertEquals(null, result.metadata.last4Digits)
-    }
+            // Verify history saved exactly 1 record and NEVER contains card digits
+            assertEquals(1, historyRepo.history.value.size)
+            val saved = historyRepo.history.value.first()
+            assertEquals(125050L, saved.amountKopecks)
+            assertEquals(DemoTransaction.STATUS_COMPLETED, saved.status)
+            assertEquals(PaymentDirection.RECEIVE, saved.direction)
+            assertFalse(saved.openCardInfo.contains("4321"))
+            assertFalse(saved.openCardInfo.contains("9999"))
+        }
 
     @Test
-    fun `demo without NFC skips consent and waiting and does not invent card digits`() = runTest {
-        val vm = createViewModel()
-        vm.updateNfcStatus(NfcHardwareStatus.NOT_SUPPORTED)
+    fun `reverse send to card flow preserves SEND direction through tap, processing, result, and history`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
-        vm.onDemoWithoutNfcClick()
-        val entry = vm.uiState.value as TerminalUiState.AmountEntry
-        assertTrue(entry.isNoCardDemo)
+            vm.onSendToCardClick()
+            val entry = vm.uiState.value as TerminalUiState.AmountEntry
+            assertEquals(PaymentDirection.SEND, entry.direction)
 
-        vm.onDigitPressed('9')
-        vm.onDigitPressed('9')
-        vm.onAmountContinueClick()
+            "2500".forEach { vm.onDigitPressed(it) }
+            vm.onAmountContinueClick()
 
-        assertTrue(vm.uiState.value is TerminalUiState.Processing)
+            val consent = vm.uiState.value as TerminalUiState.CardholderConsent
+            assertEquals(PaymentDirection.SEND, consent.direction)
+            assertEquals(250_000L, consent.amountKopecks)
 
-        advanceTimeBy(1500L)
-        advanceUntilIdle()
+            vm.onConsentConfirmed()
+            val waiting = vm.uiState.value as TerminalUiState.WaitingForCard
+            assertEquals(PaymentDirection.SEND, waiting.direction)
 
-        val result = vm.uiState.value as TerminalUiState.Result
-        assertTrue(result.metadata.isNoCardDemo)
-        assertFalse(result.metadata.hasVerifiedLast4)
-        assertEquals("Без считывания карты", historyRepo.history.value.first().openCardInfo)
-    }
+            val meta = CardPublicMetadata(
+                last4Digits = "7788",
+                applicationLabel = "MIR",
+                nfcTechnology = "IsoDep (EMV)"
+            )
+            vm.onNfcTagResult(NfcReadResult.CardRead(meta))
+            val processing = vm.uiState.value as TerminalUiState.Processing
+            assertEquals(PaymentDirection.SEND, processing.direction)
+
+            advanceTimeBy(1500L)
+            advanceUntilIdle()
+
+            val result = vm.uiState.value as TerminalUiState.Result
+            assertEquals(PaymentDirection.SEND, result.direction)
+            assertEquals(250_000L, result.amountKopecks)
+            assertEquals("7788", result.metadata.last4Digits)
+
+            val saved = historyRepo.history.value.first()
+            assertEquals(PaymentDirection.SEND, saved.direction)
+            assertFalse(saved.openCardInfo.contains("7788"))
+        }
 
     @Test
-    fun `waiting for card times out after 30 seconds`() = runTest {
+    fun `card without readable last4 prompts user and continues without fake digits`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+
+            vm.onReceivePaymentClick()
+            vm.onDigitPressed('5')
+            vm.onDigitPressed('0')
+            vm.onAmountContinueClick()
+            vm.onConsentConfirmed()
+
+            val noNumberMeta = CardPublicMetadata(
+                last4Digits = null,
+                applicationLabel = null,
+                nfcTechnology = "NfcA"
+            )
+            vm.onNfcTagResult(NfcReadResult.NumberUnavailable(noNumberMeta))
+            assertTrue(vm.uiState.value is TerminalUiState.NumberUnavailablePrompt)
+
+            vm.onContinueWithoutCardNumber()
+            assertTrue(vm.uiState.value is TerminalUiState.Processing)
+
+            advanceTimeBy(1500L)
+            advanceUntilIdle()
+
+            val result = vm.uiState.value as TerminalUiState.Result
+            assertFalse(result.metadata.hasVerifiedLast4)
+            assertNull(result.metadata.last4Digits)
+        }
+
+    @Test
+    fun `demo without NFC skips consent and waiting and does not invent card digits`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.NOT_SUPPORTED)
+
+            vm.onDemoWithoutNfcClick()
+            val entry = vm.uiState.value as TerminalUiState.AmountEntry
+            assertTrue(entry.isNoCardDemo)
+
+            vm.onDigitPressed('9')
+            vm.onDigitPressed('9')
+            vm.onAmountContinueClick()
+
+            assertTrue(vm.uiState.value is TerminalUiState.Processing)
+
+            advanceTimeBy(1500L)
+            advanceUntilIdle()
+
+            val result = vm.uiState.value as TerminalUiState.Result
+            assertTrue(result.metadata.isNoCardDemo)
+            assertFalse(result.metadata.hasVerifiedLast4)
+            assertEquals("Без считывания карты", historyRepo.history.value.first().openCardInfo)
+        }
+
+    @Test
+    fun `waiting for card times out after 30 seconds`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -197,7 +254,7 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `backgrounding app stops NFC waiting immediately`() = runTest {
+    fun `backgrounding app stops NFC waiting immediately`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
 
@@ -213,45 +270,103 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun `disabled or missing NFC transitions cleanly to error after consent`() = runTest {
+    fun `nfc scanner reads, previews, saves, views, and deletes open tag records`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+
+            vm.onOpenNfcScannerClick()
+            assertTrue(vm.uiState.value is TerminalUiState.NfcScannerHome)
+
+            vm.onStartNfcScanClick()
+            assertTrue(vm.uiState.value is TerminalUiState.NfcScannerReading)
+
+            val scanned = NfcScanRecord(
+                id = "scan-1",
+                title = "Метка · Офис",
+                timestampMillis = fakeClockTime,
+                uidHex = "04:A1:B2:C3",
+                technologies = listOf("NfcA", "Ndef")
+            )
+            vm.onNfcScanResult(NfcScanReadResult.Scanned(scanned))
+            assertTrue(vm.uiState.value is TerminalUiState.NfcScanPreview)
+
+            vm.onSaveScannedTag(title = "Пропуск", note = "Главный вход")
+            val detail = vm.uiState.value as TerminalUiState.NfcScanDetail
+            assertEquals("Пропуск", detail.record.title)
+            assertEquals("Главный вход", detail.record.note)
+            assertEquals(1, scanRepo.scans.value.size)
+
+            vm.onDeleteSavedScan("scan-1")
+            assertTrue(vm.uiState.value is TerminalUiState.NfcScannerHome)
+            assertTrue(scanRepo.scans.value.isEmpty())
+        }
+
+    @Test
+    fun `nfc scanner stops on timeout and backgrounding`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        vm.updateNfcStatus(NfcHardwareStatus.DISABLED)
-
-        vm.onReceivePaymentClick()
-        vm.onDigitPressed('2')
-        vm.onDigitPressed('5')
-        vm.onAmountContinueClick()
-        vm.onConsentConfirmed()
-
-        val disabledErr = vm.uiState.value as TerminalUiState.Error
-        assertEquals(TerminalError.NFC_DISABLED, disabledErr.error)
-
-        // Enabling NFC and retrying resumes waiting
         vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+
+        vm.onOpenNfcScannerClick()
+        vm.onStartNfcScanClick()
+        advanceTimeBy(30_000L)
+        advanceUntilIdle()
+
+        val timeoutErr = vm.uiState.value as TerminalUiState.Error
+        assertEquals(TerminalError.TIMEOUT, timeoutErr.error)
+        assertTrue(timeoutErr.isFromScanner)
+
         vm.onRetryWaiting()
-        assertTrue(vm.uiState.value is TerminalUiState.WaitingForCard)
+        assertTrue(vm.uiState.value is TerminalUiState.NfcScannerReading)
+
+        vm.onAppBackgrounded()
+        val bgErr = vm.uiState.value as TerminalUiState.Error
+        assertEquals(TerminalError.APP_BACKGROUNDED, bgErr.error)
+        assertTrue(bgErr.isFromScanner)
     }
 
     @Test
-    fun `unsupported card and interrupted read produce expected error states`() = runTest {
-        val vm = createViewModel()
-        vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+    fun `disabled or missing NFC transitions cleanly to error after consent`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.DISABLED)
 
-        vm.onReceivePaymentClick()
-        vm.onDigitPressed('1')
-        vm.onAmountContinueClick()
-        vm.onConsentConfirmed()
+            vm.onReceivePaymentClick()
+            vm.onDigitPressed('2')
+            vm.onDigitPressed('5')
+            vm.onAmountContinueClick()
+            vm.onConsentConfirmed()
 
-        vm.onNfcTagResult(NfcReadResult.UnsupportedCard)
-        assertEquals(TerminalError.UNSUPPORTED_CARD, (vm.uiState.value as TerminalUiState.Error).error)
+            val disabledErr = vm.uiState.value as TerminalUiState.Error
+            assertEquals(TerminalError.NFC_DISABLED, disabledErr.error)
 
-        vm.onRetryWaiting()
-        vm.onNfcTagResult(NfcReadResult.ReadInterrupted)
-        assertEquals(TerminalError.READ_INTERRUPTED, (vm.uiState.value as TerminalUiState.Error).error)
-    }
+            // Enabling NFC and retrying resumes waiting
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+            vm.onRetryWaiting()
+            assertTrue(vm.uiState.value is TerminalUiState.WaitingForCard)
+        }
 
     @Test
-    fun `clearing history removes all saved items`() = runTest {
+    fun `unsupported card and interrupted read produce expected error states`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+            vm.updateNfcStatus(NfcHardwareStatus.ENABLED)
+
+            vm.onReceivePaymentClick()
+            vm.onDigitPressed('1')
+            vm.onAmountContinueClick()
+            vm.onConsentConfirmed()
+
+            vm.onNfcTagResult(NfcReadResult.UnsupportedCard)
+            assertEquals(TerminalError.UNSUPPORTED_CARD, (vm.uiState.value as TerminalUiState.Error).error)
+
+            vm.onRetryWaiting()
+            vm.onNfcTagResult(NfcReadResult.ReadInterrupted)
+            assertEquals(TerminalError.READ_INTERRUPTED, (vm.uiState.value as TerminalUiState.Error).error)
+        }
+
+    @Test
+    fun `clearing history removes all saved items`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onDemoWithoutNfcClick()
         vm.onDigitPressed('5')
@@ -283,6 +398,20 @@ class TerminalViewModelTest {
         }
         override fun clearHistory() {
             _history.value = emptyList()
+        }
+    }
+
+    private class FakeNfcScanRepository : NfcScanRepository {
+        private val _scans = MutableStateFlow<List<NfcScanRecord>>(emptyList())
+        override val scans: StateFlow<List<NfcScanRecord>> = _scans.asStateFlow()
+        override fun saveScan(record: NfcScanRecord) {
+            _scans.value = listOf(record) + _scans.value.filterNot { it.id == record.id }
+        }
+        override fun deleteScan(id: String) {
+            _scans.value = _scans.value.filterNot { it.id == id }
+        }
+        override fun clearScans() {
+            _scans.value = emptyList()
         }
     }
 }

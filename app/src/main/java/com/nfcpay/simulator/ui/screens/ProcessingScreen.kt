@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
 import com.nfcpay.simulator.domain.model.CardPublicMetadata
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.theme.EmeraldAccent
 import com.nfcpay.simulator.ui.theme.EmeraldContainer
 import com.nfcpay.simulator.ui.theme.GraphiteElevated
@@ -48,8 +49,12 @@ import com.nfcpay.simulator.ui.theme.TextSecondary
 @Composable
 fun ProcessingScreen(
     amountKopecks: Long,
-    metadata: CardPublicMetadata
+    metadata: CardPublicMetadata,
+    direction: PaymentDirection
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(amountKopecks)
+
     val infiniteTransition = rememberInfiniteTransition(label = "processingSpin")
     val sweepAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -114,16 +119,16 @@ fun ProcessingScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = AmountValidator.formatRubles(amountKopecks),
+            text = if (isSendMode) "+ $formattedAmount" else formattedAmount,
             style = MaterialTheme.typography.displayMedium,
-            color = TextPrimary,
+            color = if (isSendMode) EmeraldAccent else TextPrimary,
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Обработка платежа…",
+            text = if (isSendMode) "Зачисление на карту…" else "Обработка платежа…",
             style = MaterialTheme.typography.titleLarge,
             color = EmeraldAccent,
             textAlign = TextAlign.Center

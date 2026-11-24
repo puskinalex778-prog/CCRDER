@@ -2,6 +2,7 @@ package com.nfcpay.simulator.data
 
 import android.content.Context
 import com.nfcpay.simulator.domain.model.DemoTransaction
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ interface HistoryRepository {
  * - status ("Завершенные платежи")
  * - openCardInfo (public card tech / EMV label or "Без считывания карты")
  * - isNoCardDemo
+ * - direction (RECEIVE / SEND)
  *
  * NEVER persists card numbers (full or masked), expiry dates, CVV, Track 2, or bank receipt IDs.
  */
@@ -57,6 +59,9 @@ class SharedPreferencesHistoryRepository(context: Context) : HistoryRepository {
                     val status = obj.optString("status", DemoTransaction.STATUS_COMPLETED)
                     val openCardInfo = obj.optString("openCardInfo", "Без считывания карты")
                     val isNoCardDemo = obj.optBoolean("isNoCardDemo", false)
+                    val directionName = obj.optString("direction", PaymentDirection.RECEIVE.name)
+                    val direction = PaymentDirection.entries.firstOrNull { it.name == directionName }
+                        ?: PaymentDirection.RECEIVE
                     if (amount > 0L && timestamp > 0L) {
                         add(
                             DemoTransaction(
@@ -65,7 +70,8 @@ class SharedPreferencesHistoryRepository(context: Context) : HistoryRepository {
                                 timestampMillis = timestamp,
                                 status = status,
                                 openCardInfo = openCardInfo,
-                                isNoCardDemo = isNoCardDemo
+                                isNoCardDemo = isNoCardDemo,
+                                direction = direction
                             )
                         )
                     }
@@ -86,6 +92,7 @@ class SharedPreferencesHistoryRepository(context: Context) : HistoryRepository {
                 put("status", item.status)
                 put("openCardInfo", item.openCardInfo)
                 put("isNoCardDemo", item.isNoCardDemo)
+                put("direction", item.direction.name)
             }
             array.put(obj)
         }

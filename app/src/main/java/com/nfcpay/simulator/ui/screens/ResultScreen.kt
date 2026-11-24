@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.nfcpay.simulator.R
 import com.nfcpay.simulator.domain.AmountValidator
 import com.nfcpay.simulator.domain.model.CardPublicMetadata
+import com.nfcpay.simulator.domain.model.PaymentDirection
 import com.nfcpay.simulator.ui.components.TerminalPrimaryButton
 import com.nfcpay.simulator.ui.components.TerminalSecondaryButton
 import com.nfcpay.simulator.ui.theme.EmeraldAccent
@@ -53,9 +54,13 @@ fun ResultScreen(
     amountKopecks: Long,
     metadata: CardPublicMetadata,
     timestampMillis: Long,
+    direction: PaymentDirection,
     onRepeatClick: () -> Unit,
     onHomeClick: () -> Unit
 ) {
+    val isSendMode = direction == PaymentDirection.SEND
+    val formattedAmount = AmountValidator.formatRubles(amountKopecks)
+
     val badgeScale = remember { Animatable(0.6f) }
     LaunchedEffect(Unit) {
         badgeScale.animateTo(
@@ -84,23 +89,23 @@ fun ResultScreen(
 
         Image(
             painter = painterResource(id = R.drawable.ill_success),
-            contentDescription = "Перевод завершён",
+            contentDescription = if (isSendMode) "Зачисление завершено" else "Перевод завершён",
             modifier = Modifier
                 .size(164.dp)
                 .scale(badgeScale.value)
         )
 
         Text(
-            text = "Перевод завершён",
+            text = if (isSendMode) "Зачисление завершено" else "Перевод завершён",
             style = MaterialTheme.typography.headlineMedium,
             color = EmeraldAccent,
             textAlign = TextAlign.Center
         )
 
         Text(
-            text = AmountValidator.formatRubles(amountKopecks),
+            text = if (isSendMode) "+ $formattedAmount" else formattedAmount,
             style = MaterialTheme.typography.displayLarge,
-            color = TextPrimary,
+            color = if (isSendMode) EmeraldAccent else TextPrimary,
             textAlign = TextAlign.Center
         )
 
@@ -130,6 +135,12 @@ fun ResultScreen(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                ResultInfoRow(
+                    label = "Тип операции",
+                    value = if (isSendMode) "Зачисление на карту" else "Получение платежа"
+                )
+                HorizontalDivider(color = GraphiteOutline.copy(alpha = 0.6f))
+
                 // Show "Карта •••• 1234" ONLY when 4 digits were actually read from the card
                 if (metadata.hasVerifiedLast4) {
                     ResultInfoRow(
@@ -159,7 +170,7 @@ fun ResultScreen(
                 HorizontalDivider(color = GraphiteOutline.copy(alpha = 0.6f))
 
                 Text(
-                    text = "Офлайн-демонстрация NFC PAY. Реальное списание средств не выполняется, банковский чек не формируется.",
+                    text = "Офлайн-демонстрация NFC PAY. Реальное движение средств не выполняется, банковский чек не формируется.",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )

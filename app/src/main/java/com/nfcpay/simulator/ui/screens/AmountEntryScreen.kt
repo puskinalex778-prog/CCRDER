@@ -72,7 +72,7 @@ fun AmountEntryScreen(
 
     val hintText = when {
         input.isValid && isSendMode -> "Нажмите «Отправить» и приложите карту"
-        input.isValid -> "Сумма готова к демонстрации"
+        input.isValid -> "Сумма готова к оплате"
         input.rawInput.isEmpty() && isSendMode -> "Укажите сумму для зачисления на карту"
         input.rawInput.isEmpty() -> "Введите сумму больше 0 ₽"
         input.validationError == AmountValidationError.ZERO_OR_NEGATIVE ->
@@ -81,7 +81,7 @@ fun AmountEntryScreen(
     }
 
     val topTitle = when {
-        isNoCardDemo -> "Демо без NFC"
+        isNoCardDemo -> "Оплата без NFC"
         isSendMode -> "Зачислить на карту"
         else -> "Сумма платежа"
     }
@@ -134,7 +134,7 @@ fun AmountEntryScreen(
                     border = BorderStroke(1.dp, EmeraldAccent.copy(alpha = 0.35f))
                 ) {
                     Text(
-                        text = "Обратная отправка · Демо-зачисление",
+                        text = "Перевод на карту",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = EmeraldAccent,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)

@@ -116,7 +116,7 @@ fun WaitingForCardScreen(
             // Amount display
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (isSendMode) "К ЗАЧИСЛЕНИЮ НА КАРТУ" else "СУММА ДЕМОНСТРАЦИИ",
+                    text = if (isSendMode) "К ЗАЧИСЛЕНИЮ НА КАРТУ" else "СУММА К ОПЛАТЕ",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextSecondary
                 )

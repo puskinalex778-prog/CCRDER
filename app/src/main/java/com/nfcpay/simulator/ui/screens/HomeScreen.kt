@@ -128,7 +128,7 @@ fun HomeScreen(
                         shape = CircleShape
                     ) {
                         Text(
-                            text = "ДЕМО-ТЕРМИНАЛ · ОФЛАЙН",
+                            text = "NFC-ТЕРМИНАЛ",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -139,12 +139,12 @@ fun HomeScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Симулятор NFC-оплаты",
+                            text = "Бесконтактные платежи",
                             style = MaterialTheme.typography.titleLarge,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Приём, зачисление и чтение NFC без списания средств",
+                            text = "Приём, отправка на карту и чтение NFC",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -207,7 +207,7 @@ fun HomeScreen(
             )
 
             TerminalSecondaryButton(
-                text = "Демо без NFC",
+                text = "Оплата без NFC",
                 onClick = onDemoWithoutNfcClick,
                 iconRes = R.drawable.ic_demo,
                 accentColor = TextPrimary
@@ -270,7 +270,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = "Развлекательный офлайн-симулятор · Интернет не используется",
+            text = "NFC PAY · Автономный режим",
             style = MaterialTheme.typography.labelMedium,
             color = TextMuted,
             modifier = Modifier.align(Alignment.CenterHorizontally)

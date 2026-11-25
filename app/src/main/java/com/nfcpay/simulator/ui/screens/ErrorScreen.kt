@@ -46,7 +46,7 @@ fun ErrorScreen(
             if (isFromScanner) {
                 "На этом устройстве отсутствует модуль NFC, поэтому считывание меток недоступно."
             } else {
-                "На этом устройстве отсутствует модуль NFC. Вы можете запустить демонстрацию в режиме «Демо без NFC»."
+                "На этом устройстве отсутствует модуль NFC. Вы можете продолжить в режиме «Оплата без NFC»."
             }
         )
         TerminalError.NFC_DISABLED -> Triple(
@@ -136,7 +136,7 @@ fun ErrorScreen(
                         }
                         if (!isFromScanner) {
                             TerminalSecondaryButton(
-                                text = "Демо без NFC",
+                                text = "Оплата без NFC",
                                 onClick = onDemoWithoutNfcClick,
                                 iconRes = R.drawable.ic_demo,
                                 accentColor = EmeraldAccent
@@ -146,7 +146,7 @@ fun ErrorScreen(
                     TerminalError.NFC_NOT_SUPPORTED -> {
                         if (!isFromScanner) {
                             TerminalPrimaryButton(
-                                text = "Демо без NFC",
+                                text = "Оплата без NFC",
                                 onClick = onDemoWithoutNfcClick,
                                 iconRes = R.drawable.ic_demo
                             )
@@ -165,7 +165,7 @@ fun ErrorScreen(
                         }
                         if (!isFromScanner) {
                             TerminalSecondaryButton(
-                                text = "Демо без NFC",
+                                text = "Оплата без NFC",
                                 onClick = onDemoWithoutNfcClick,
                                 iconRes = R.drawable.ic_demo,
                                 accentColor = EmeraldAccent

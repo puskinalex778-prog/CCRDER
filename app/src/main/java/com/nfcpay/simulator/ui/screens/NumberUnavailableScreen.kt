@@ -83,7 +83,7 @@ fun NumberUnavailableScreen(
 
             Text(
                 text = "Не все бесконтактные карты отдают последние цифры номера через открытые NFC-записи. " +
-                    "Вы можете продолжить демонстрацию без реквизитов карты.",
+                    "Вы можете продолжить операцию без отображения номера карты.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center

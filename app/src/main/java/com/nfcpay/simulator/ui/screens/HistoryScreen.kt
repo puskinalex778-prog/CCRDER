@@ -104,7 +104,7 @@ fun HistoryScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Здесь будут отображаться локальные записи завершённых демонстраций без сохранения платёжных реквизитов.",
+                    text = "Здесь будут отображаться завершённые операции.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     textAlign = TextAlign.Center
@@ -131,7 +131,7 @@ fun HistoryScreen(
             textContentColor = TextSecondary,
             title = { Text("Очистить историю?") },
             text = {
-                Text("Все локальные записи демонстраций будут удалены с устройства.")
+                Text("Все записи истории будут удалены с устройства.")
             },
             confirmButton = {
                 TextButton(

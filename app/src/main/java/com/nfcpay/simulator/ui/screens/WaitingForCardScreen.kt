@@ -111,7 +111,7 @@ fun WaitingForCardScreen(
             // Amount display
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "СУММА ДЕМОНСТРАЦИИ",
+                    text = "СУММА К ОПЛАТЕ",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextSecondary
                 )

@@ -65,7 +65,7 @@ fun AmountEntryScreen(
     }
 
     val hintText = when {
-        input.isValid -> "Сумма готова к демонстрации"
+        input.isValid -> "Сумма готова к оплате"
         input.rawInput.isEmpty() -> "Введите сумму больше 0 ₽"
         input.validationError == AmountValidationError.ZERO_OR_NEGATIVE ->
             "Сумма должна быть больше нуля"
@@ -78,7 +78,7 @@ fun AmountEntryScreen(
             .verticalScroll(rememberScrollState())
     ) {
         TerminalTopBar(
-            title = if (isNoCardDemo) "Демо без NFC" else "Сумма платежа",
+            title = if (isNoCardDemo) "Оплата без NFC" else "Сумма платежа",
             onBackClick = onBackClick,
             trailingAction = {
                 if (input.rawInput.isNotEmpty()) {

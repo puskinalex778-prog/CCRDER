@@ -42,12 +42,12 @@ fun ErrorScreen(
         TerminalError.NFC_NOT_SUPPORTED -> Triple(
             R.drawable.ill_nfc_disabled,
             "NFC не поддерживается",
-            "На этом устройстве отсутствует модуль NFC. Вы можете запустить демонстрацию в режиме «Демо без NFC»."
+            "На этом устройстве отсутствует модуль NFC. Вы можете продолжить в режиме «Оплата без NFC»."
         )
         TerminalError.NFC_DISABLED -> Triple(
             R.drawable.ill_nfc_disabled,
             "NFC выключен",
-            "Включите NFC в системных настройках устройства и вернитесь в приложение, либо используйте режим «Демо без NFC»."
+            "Включите NFC в системных настройках устройства и вернитесь в приложение, либо используйте режим «Оплата без NFC»."
         )
         TerminalError.UNSUPPORTED_CARD -> Triple(
             R.drawable.ill_error,
@@ -130,7 +130,7 @@ fun ErrorScreen(
                             )
                         }
                         TerminalSecondaryButton(
-                            text = "Демо без NFC",
+                            text = "Оплата без NFC",
                             onClick = onDemoWithoutNfcClick,
                             iconRes = R.drawable.ic_demo,
                             accentColor = EmeraldAccent
@@ -138,7 +138,7 @@ fun ErrorScreen(
                     }
                     TerminalError.NFC_NOT_SUPPORTED -> {
                         TerminalPrimaryButton(
-                            text = "Демо без NFC",
+                            text = "Оплата без NFC",
                             onClick = onDemoWithoutNfcClick,
                             iconRes = R.drawable.ic_demo
                         )
@@ -155,7 +155,7 @@ fun ErrorScreen(
                             )
                         }
                         TerminalSecondaryButton(
-                            text = "Демо без NFC",
+                            text = "Оплата без NFC",
                             onClick = onDemoWithoutNfcClick,
                             iconRes = R.drawable.ic_demo,
                             accentColor = EmeraldAccent

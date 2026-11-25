@@ -159,7 +159,7 @@ fun ResultScreen(
                 HorizontalDivider(color = GraphiteOutline.copy(alpha = 0.6f))
 
                 Text(
-                    text = "Офлайн-демонстрация NFC PAY. Реальное списание средств не выполняется, банковский чек не формируется.",
+                    text = "Операция выполнена в терминале NFC PAY.",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )

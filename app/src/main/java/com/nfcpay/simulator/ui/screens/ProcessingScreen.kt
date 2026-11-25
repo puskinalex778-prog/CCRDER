@@ -143,7 +143,7 @@ fun ProcessingScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "Офлайн-анимация терминала NFC PAY",
+            text = "Терминал NFC PAY",
             style = MaterialTheme.typography.labelMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center
